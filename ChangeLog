@@ -1,7 +1,8 @@
 # ChangeLog for squashmount
 
-*bookmarkdupes-2.2:
+*bookmarkdupes-3.0:
 	Martin Väth <martin at mvath.de>:
+	- Support checking/removing failing bookmarks
 	- Display total number of bookmarks
 	- Calculate in background
 	- Calculate optionally asynchronously (not yet used)

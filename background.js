@@ -90,8 +90,11 @@ function processMarked(remove, removeList) {
   processRecurse();
 }
 
+
 function calculate(command, async) {
-  let exact, handleFunction, result, urlMap;
+  let exact, folder, handleFunction, result, urlMap, fetchArg;
+
+  function dummy() {}
 
   function calculateFinish(mode) {
     state = {
@@ -111,20 +114,7 @@ function calculate(command, async) {
     sendState();
   }
 
-  function calculateCount() {
-     if (counting) {
-       ++(state.todo);
-       return true;
-     }
-     ++(state.total);
-     sendState();
-     return false;
-  }
-
-  function handleDupe(node, parent) {
-    if ((!node.url) || (node.type && node.type != "bookmark")) {
-      return;
-    }
+  function handleDupe(node, parent, callback) {
     ++(result.all);
     let groupIndex = node.url;
     let extra;
@@ -145,6 +135,7 @@ function calculate(command, async) {
       result.result.push(group);
       urlMap.set(groupIndex, group);
     } else if (group.ids.has(id)) {
+      callback();
       return;
     }
     group.ids.add(id);
@@ -156,10 +147,12 @@ function calculate(command, async) {
       bookmark.extra = extra;
     }
     group.data.push(bookmark);
+    callback();
   }
 
-  function handleEmpty(node, parent) {
+  function handleEmpty(node, parent, callback) {
     if (node.url || (node.type && (node.type != "folder"))) {
+      callback();
       return;
     }
     let bookmark = {
@@ -167,15 +160,13 @@ function calculate(command, async) {
       text: parent + node.title
     };
     result.push(bookmark);
+    callback();
   }
 
-  function handleAll(node, parent, index) {
-    if ((!node.url) || (node.type && node.type != "bookmark")) {
-      return;
-    }
+  function handleAll(node, parent, callback, index) {
     let bookmark = {
       id: node.id,
-      text: parent + node.title,
+      text: parent + node.title
     };
     result.push(bookmark);
     bookmark = {
@@ -188,13 +179,40 @@ function calculate(command, async) {
       bookmark.type = node.type;
     }
     bookmarkIds.set(node.id, bookmark);
+    callback();
+  }
+
+  function handleUrlResponse(node, parent, callback, response) {
+    ++(result.all);
+    let bookmark = {};
+    if (typeof(response) != "undefined") {
+      if ((!response.redirected) || (response.url == node.url)) {
+        callback();
+        return;
+      }
+      bookmark.url = response.url;
+    }
+    bookmark.id = node.id;
+    bookmark.text = parent + node.title;
+    result.result.push(bookmark);
+    callback();
+  }
+
+  function handleUrl(node, parent, callback) {
+    fetch(node.url, fetchArg).then(function (response) {
+      handleUrlResponse(node, parent, callback, response);
+    }, function () {
+      handleUrlResponse(node, parent, callback);
+    });
   }
 
   function recurse(node, callback) {
 
     function recurseCount(node) {
       if ((!node.children) || (!node.children.length)) {
-        ++(state.todo);
+        if (parent && !node.unmodifiable) {
+          ++(state.todo);
+        }
         return;
       }
       for (let child of node.children) {
@@ -209,11 +227,17 @@ function calculate(command, async) {
       }
       if ((!node.children) || (!node.children.length)) {
         if (parent && !node.unmodifiable) {
-          handleFunction(node, parent, index);
-        }
-        if (async) {
-          ++(state.total);
-          sendState();
+          if (async) {
+            ++(state.total);
+            sendState();
+          }
+          if (folder) {
+            handleFunction(node, parent, callback);
+            return;
+          } else if (node.url && ((!node.type) || (node.type == "bookmark"))) {
+            handleFunction(node, parent, callback, index);
+            return;
+          }
         }
         callback();
         return;
@@ -227,7 +251,7 @@ function calculate(command, async) {
       }
       index = 0;
       for (let child of node.children) {
-        recurseMain(child, parent, ++index, function () {});
+        recurseMain(child, parent, ++index, dummy);
       }
       callback();
     }
@@ -251,7 +275,6 @@ function calculate(command, async) {
   }
 
   function calculateDupes(nodes) {
-    handleFunction = handleDupe;
     urlMap = new Map();
     result = {
       result: new Array(),
@@ -265,7 +288,6 @@ function calculate(command, async) {
   }
 
   function calculateEmpty(nodes) {
-    handleFunction = handleEmpty;
     result = new Array();
     recurse(nodes[0], function () {
       calculateFinish("calculatedEmptyFolder");
@@ -273,7 +295,6 @@ function calculate(command, async) {
   }
 
   function calculateAll(nodes) {
-    handleFunction = handleAll;
     bookmarkIds = new Map();
     result = new Array();
     recurse(nodes[0], function () {
@@ -281,21 +302,48 @@ function calculate(command, async) {
     });
   }
 
+  function calculateUrl(nodes) {
+    bookmarkIds = new Map();
+    result = {
+      result: new Array(),
+      all: 0
+    };
+    fetchArg = {
+      cache : "no-store",
+      credentials : "omit",
+      method : "GET"
+    };
+    recurse(nodes[0], function() {
+      fetchArg = {};
+      calculateFinish("calculatedUrl");
+    });
+  }
+
   let mainFunction;
   exact = false;
   async = false;
+  folder = false;
   switch (command) {
     case "calculateExactDupes":
       exact = true;
       // fallthrough
     case "calculateSimilarDupes":
       mainFunction = calculateDupes;
+      handleFunction = handleDupe;
       break;
     case "calculateEmptyFolder":
+      folder = true;
       mainFunction = calculateEmpty;
+      handleFunction = handleEmpty;
       break;
     case "calculateAll":
       mainFunction = calculateAll;
+      handleFunction = handleAll;
+      break;
+    case "calculateUrl":
+      async = true;
+      mainFunction = calculateUrl;
+      handleFunction = handleUrl;
       break;
     default:  // should not happen
       return;

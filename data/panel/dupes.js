@@ -130,7 +130,7 @@ function addRuler() {
   top.appendChild(ruler);
 }
 
-function addBookmark(text, id) {
+function addBookmark(text, id, add) {
   let checkbox = document.createElement("INPUT");
   checkbox.type = "checkbox";
   checkbox.checked = false;
@@ -139,6 +139,10 @@ function addBookmark(text, id) {
   col.appendChild(checkbox);
   let textNode = document.createTextNode(text);
   col.appendChild(textNode);
+  if (typeof(url) != "undefined") {
+    let urlNode = document.createTextNode(add);
+    col.appendChild(urlNode);
+  }
   let row = document.createElement("TR");
   row.appendChild(col);
   let top = getTop();
@@ -233,6 +237,26 @@ function displayAll(result) {
     }
   }
   displayMessage(browser.i18n.getMessage("messageAll", String(total)));
+}
+
+function displayUrl(result) {
+  clearProgressButton();
+  let total = result.result.length;
+  let redirect = 0;
+  if (total) {
+    addButtons(3);
+    for (let bookmark of result.result) {
+      if (bookmark.url) {
+        ++redirect;
+        addBookmark(bookmark.text, bookmark.id, "-> " + bookmark.url);
+      } else {
+        addBookmark(bookmark.text, bookmark.id);
+      }
+    }
+  }
+  let failed = total - redirect;
+  displayMessage(browser.i18n.getMessage("messageUrl",
+    [String(total), String(failed), String(redirect), String(result.all)]));
 }
 
 function sendMessageCommand(command) {
@@ -332,6 +356,9 @@ function displayFinish(textId, state) {
       case "buttonListAll":
         calculating("calculateAll");
         return;
+      case "buttonListUrl":
+        calculating("calculateUrl");
+        return;
       case "buttonRemoveMarked":
         processMarked(true);
         return;
@@ -358,6 +385,7 @@ function displayFinish(textId, state) {
   addButton(parent, "buttonListExactDupes");
   addButton(parent, "buttonListSimilarDupes");
   addButton(parent, "buttonListEmpty");
+  addButton(parent, "buttonListUrl");
   addButton(parent, "buttonListAll");
   document.addEventListener("click", clickListener);
 
@@ -388,6 +416,9 @@ function displayFinish(textId, state) {
         break;
       case "calculatedAll":
         displayAll(state.result);
+        break;
+      case "calculatedUrl":
+        displayUrl(state.result);
         break;
       case "virgin":
         break;

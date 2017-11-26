@@ -19,6 +19,10 @@
     "message": "Empty folders",
     "description": "Button for listing empty folders"
   },
+  "buttonListUrl": {
+    "message": "All outdated bookmarks",
+    "description": "Button for listing outdated bookmarks"
+  },
   "buttonListAll": {
     "message": "All bookmarks",
     "description": "Button for listing all bookmarks"
@@ -60,7 +64,7 @@
     "description": "Button for emergency stop of display calculation"
   },
   "messageExactMatchesGroups": {
-    "message": "$TOTAL$ | $ALL$ exact dupes in $GROUPS$ groups",
+    "message": "$TOTAL$ (of $ALL$) exact dupes in $GROUPS$ groups",
     "description": "Report specified numbers of exact matches and groups of all",
     "placeholders": {
       "total": {
@@ -78,7 +82,7 @@
     }
   },
   "messageSimilarMatchesGroups": {
-    "message": "$TOTAL$ | $ALL$ similar dupes in $GROUPS$ groups",
+    "message": "$TOTAL$ (of $ALL$) similar dupes in $GROUPS$ groups",
     "description": "Report specified numbers of similar matches and groups of all",
     "placeholders": {
       "total": {
@@ -112,6 +116,28 @@
       "total": {
         "content": "$1",
         "example": "0"
+      }
+    }
+  },
+  "messageUrl": {
+    "message": "$TOTAL$ problems ($FAILED$ failed, $REDIRECTED$ redirected) of $ALL$",
+    "description": "Report specified numbers of problems (failures/redirected) and of all bookmarks",
+    "placeholders": {
+      "total": {
+        "content": "$1",
+        "example": "0"
+      },
+      "failed": {
+        "content": "$2",
+        "example": "0"
+      },
+      "redirected": {
+        "content": "$3",
+        "example": "0"
+      },
+      "all": {
+        "content": "$4",
+        "example": "1"
       }
     }
   },
